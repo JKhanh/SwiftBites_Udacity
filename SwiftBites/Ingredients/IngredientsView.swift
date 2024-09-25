@@ -1,17 +1,19 @@
+import SwiftData
 import SwiftUI
 
 struct IngredientsView: View {
-  typealias Selection = (MockIngredient) -> Void
+  typealias Selection = (Ingredient) -> Void
 
   let selection: Selection?
 
   init(selection: Selection? = nil) {
     self.selection = selection
   }
-
-  @Environment(\.storage) private var storage
+  @Environment(\.modelContext) var context
   @Environment(\.dismiss) private var dismiss
+  @State var ingredients: [Ingredient] = []
   @State private var query = ""
+  @State private var countIngredients: Int = 0
 
   // MARK: - Body
 
@@ -19,8 +21,15 @@ struct IngredientsView: View {
     NavigationStack {
       content
         .navigationTitle("Ingredients")
+        .searchable(text: $query)
+        .onAppear {
+          fetchIngredients()
+        }
+        .onChange(of: query) {
+          fetchIngredients()
+        }
         .toolbar {
-          if !storage.ingredients.isEmpty {
+            if countIngredients > 0 {
             NavigationLink(value: IngredientForm.Mode.add) {
               Label("Add", systemImage: "plus")
             }
@@ -36,16 +45,10 @@ struct IngredientsView: View {
 
   @ViewBuilder
   private var content: some View {
-    if storage.ingredients.isEmpty {
+    if countIngredients == 0 {
       empty
     } else {
-      list(for: storage.ingredients.filter {
-        if query.isEmpty {
-          return true
-        } else {
-          return $0.name.localizedStandardContains(query)
-        }
-      })
+      list
     }
   }
 
@@ -74,7 +77,7 @@ struct IngredientsView: View {
     .listRowSeparator(.hidden)
   }
 
-  private func list(for ingredients: [MockIngredient]) -> some View {
+  private var list: some View {
     List {
       if ingredients.isEmpty {
         noResults
@@ -89,12 +92,11 @@ struct IngredientsView: View {
         }
       }
     }
-    .searchable(text: $query)
     .listStyle(.plain)
   }
 
   @ViewBuilder
-  private func row(for ingredient: MockIngredient) -> some View {
+  private func row(for ingredient: Ingredient) -> some View {
     if let selection {
       Button(
         action: {
@@ -112,14 +114,31 @@ struct IngredientsView: View {
     }
   }
 
-  private func title(for ingredient: MockIngredient) -> some View {
+  private func title(for ingredient: Ingredient) -> some View {
     Text(ingredient.name)
       .font(.title3)
   }
 
   // MARK: - Data
 
-  private func delete(ingredient: MockIngredient) {
-    storage.deleteIngredient(id: ingredient.id)
+  private func delete(ingredient: Ingredient) {
+    context.delete(ingredient)
+  }
+
+  private func fetchIngredients() {
+      let sortDescriptor = SortDescriptor<Ingredient>(\.name)
+    let descriptor = FetchDescriptor<Ingredient>(
+      predicate: #Predicate {
+        query.isEmpty || $0.name.localizedStandardContains(query)
+      },
+      sortBy: [sortDescriptor]
+    )
+    let countDescriptor = FetchDescriptor<Ingredient>()
+    do {
+      ingredients = try context.fetch(descriptor)
+      countIngredients = try context.fetchCount(countDescriptor)
+    } catch {
+
+    }
   }
 }

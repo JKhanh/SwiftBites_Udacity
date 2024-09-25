@@ -1,9 +1,12 @@
+import SwiftData
 import SwiftUI
 
 struct RecipesView: View {
-  @Environment(\.storage) private var storage
+  @Environment(\.modelContext) var context
   @State private var query = ""
-  @State private var sortOrder = SortDescriptor(\MockRecipe.name)
+  @State private var sortOrder = SortDescriptor(\Recipe.name)
+  @State private var recipes: [Recipe] = []
+  @State private var countRecipe: Int = 0
 
   // MARK: - Body
 
@@ -11,8 +14,15 @@ struct RecipesView: View {
     NavigationStack {
       content
         .navigationTitle("Recipes")
+        .searchable(text: $query)
+        .onAppear {
+          fetchRecipe()
+        }
+        .onChange(of: query) {
+          fetchRecipe()
+        }
         .toolbar {
-          if !storage.recipes.isEmpty {
+          if countRecipe > 0 {
             sortOptions
             ToolbarItem(placement: .topBarTrailing) {
               NavigationLink(value: RecipeForm.Mode.add) {
@@ -35,19 +45,19 @@ struct RecipesView: View {
       Menu("Sort", systemImage: "arrow.up.arrow.down") {
         Picker("Sort", selection: $sortOrder) {
           Text("Name")
-            .tag(SortDescriptor(\MockRecipe.name))
+            .tag(SortDescriptor(\Recipe.name))
 
           Text("Serving (low to high)")
-            .tag(SortDescriptor(\MockRecipe.serving, order: .forward))
+            .tag(SortDescriptor(\Recipe.serving, order: .forward))
 
           Text("Serving (high to low)")
-            .tag(SortDescriptor(\MockRecipe.serving, order: .reverse))
+            .tag(SortDescriptor(\Recipe.serving, order: .reverse))
 
           Text("Time (short to long)")
-            .tag(SortDescriptor(\MockRecipe.time, order: .forward))
+            .tag(SortDescriptor(\Recipe.time, order: .forward))
 
           Text("Time (long to short)")
-            .tag(SortDescriptor(\MockRecipe.time, order: .reverse))
+            .tag(SortDescriptor(\Recipe.time, order: .reverse))
         }
       }
       .pickerStyle(.inline)
@@ -56,16 +66,13 @@ struct RecipesView: View {
 
   @ViewBuilder
   private var content: some View {
-    if storage.recipes.isEmpty {
+      if countRecipe == 0 {
       empty
     } else {
-      list(for: storage.recipes.filter {
-        if query.isEmpty {
-          return true
-        } else {
-          return $0.name.localizedStandardContains(query) || $0.summary.localizedStandardContains(query)
+      list
+        .onChange(of: sortOrder) {
+          fetchRecipe()
         }
-      }.sorted(using: sortOrder))
     }
   }
 
@@ -93,7 +100,7 @@ struct RecipesView: View {
     )
   }
 
-  private func list(for recipes: [MockRecipe]) -> some View {
+  private var list: some View {
     ScrollView(.vertical) {
       if recipes.isEmpty {
         noResults
@@ -103,6 +110,23 @@ struct RecipesView: View {
         }
       }
     }
-    .searchable(text: $query)
+  }
+
+  private func fetchRecipe() {
+    let descriptor = FetchDescriptor<Recipe>(
+      predicate: #Predicate {
+        query.isEmpty || $0.name.localizedStandardContains(query)
+          || $0.summary.localizedStandardContains(query)
+      },
+      sortBy: [sortOrder]
+    )
+    let countDescriptor = FetchDescriptor<Recipe>()
+
+    do {
+      recipes = try context.fetch(descriptor)
+      countRecipe = try context.fetchCount(countDescriptor)
+    } catch {
+
+    }
   }
 }

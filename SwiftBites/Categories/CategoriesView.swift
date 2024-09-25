@@ -1,8 +1,13 @@
+import SwiftData
 import SwiftUI
 
 struct CategoriesView: View {
-  @Environment(\.storage) private var storage
   @State private var query = ""
+  @Environment(\.modelContext) var context
+  @State
+  private var categories: [Category] = []
+  @State
+  private var categoryNumber: Int = 0
 
   // MARK: - Body
 
@@ -10,8 +15,15 @@ struct CategoriesView: View {
     NavigationStack {
       content
         .navigationTitle("Categories")
+        .searchable(text: $query)
+        .onChange(of: query) {
+          fetchCategories()
+        }
+        .onAppear {
+          fetchCategories()
+        }
         .toolbar {
-          if !storage.categories.isEmpty {
+          if categoryNumber > 0 {
             NavigationLink(value: CategoryForm.Mode.add) {
               Label("Add", systemImage: "plus")
             }
@@ -30,16 +42,10 @@ struct CategoriesView: View {
 
   @ViewBuilder
   private var content: some View {
-    if storage.categories.isEmpty {
+    if categoryNumber == 0 {
       empty
     } else {
-      list(for: storage.categories.filter {
-        if query.isEmpty {
-          return true
-        } else {
-          return $0.name.localizedStandardContains(query)
-        }
-      })
+      list
     }
   }
 
@@ -67,7 +73,7 @@ struct CategoriesView: View {
     )
   }
 
-  private func list(for categories: [MockCategory]) -> some View {
+  private var list: some View {
     ScrollView(.vertical) {
       if categories.isEmpty {
         noResults
@@ -77,6 +83,20 @@ struct CategoriesView: View {
         }
       }
     }
-    .searchable(text: $query)
+  }
+
+  private func fetchCategories() {
+      let sortDescriptor = SortDescriptor<Category>(\.name)
+    let descriptor = FetchDescriptor<Category>(
+      predicate: #Predicate { query.isEmpty || $0.name.localizedStandardContains(query) },
+      sortBy: [sortDescriptor]
+    )
+    let countDescriptor = FetchDescriptor<Category>()
+    do {
+      categories = try context.fetch(descriptor)
+      categoryNumber = try context.fetchCount(countDescriptor)
+    } catch {
+      categoryNumber = 0
+    }
   }
 }
