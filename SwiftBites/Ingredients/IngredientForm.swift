@@ -1,4 +1,5 @@
 import SwiftUI
+import _SwiftData_SwiftUI
 
 struct IngredientForm: View {
   enum Mode: Hashable {
@@ -12,11 +13,9 @@ struct IngredientForm: View {
     self.mode = mode
     switch mode {
     case .add:
-      ingredient = nil
       _name = .init(initialValue: "")
       title = "Add Ingredient"
     case .edit(let ingredient):
-      self.ingredient = ingredient
       _name = .init(initialValue: ingredient.name)
       title = "Edit \(ingredient.name)"
     }
@@ -25,7 +24,9 @@ struct IngredientForm: View {
   private let title: String
   @State private var name: String
   @State private var error: Error?
-  private var ingredient: Ingredient?
+    
+  @Query
+  private var ingredients: [Ingredient]
   @Environment(\.dismiss) private var dismiss
   @Environment(\.modelContext) var context
   @FocusState private var isNameFocused: Bool
@@ -70,19 +71,26 @@ struct IngredientForm: View {
   // MARK: - Data
 
   private func delete(ingredient: Ingredient) {
+    for recipeIngredient in ingredient.recipeIngredients {
+      context.delete(recipeIngredient)
+    }
     context.delete(ingredient)
-    dismiss()
+    try? context.save()
   }
 
   private func save() {
-    switch mode {
-    case .add:
-      context.insert(Ingredient(name: name))
-    case .edit(_):
-      if let editIngredient = self.ingredient {
-        editIngredient.name = name
+    do {
+      switch mode {
+      case .add:
+        let ingredient = Ingredient(name: name)
+        context.insert(ingredient)
+      case .edit(let ingredient):
+        ingredient.name = name
       }
+      try context.save()
+      dismiss()
+    } catch {
+      self.error = error
     }
-    dismiss()
   }
 }

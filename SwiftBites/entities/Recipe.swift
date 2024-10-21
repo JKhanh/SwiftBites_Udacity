@@ -9,37 +9,41 @@ import Foundation
 import SwiftData
 
 @Model
-class Recipe: Identifiable {
-    var id: UUID
-    var name: String
-    var summary: String
-    var category: Category?
-    var serving: Int
-    var time: Int
-    @Relationship(deleteRule: .cascade, inverse: \RecipeIngredient.recipe)
-    var ingredients: [RecipeIngredient]
-    var instructions: String
-    var imageData: Data?
-    
-    init(
-      id: UUID = UUID(),
-      name: String = "",
-      summary: String = "",
-      category: Category? = nil,
-      serving: Int = 1,
-      time: Int = 5,
-      ingredients: [RecipeIngredient] = [],
-      instructions: String = "",
-      imageData: Data? = nil
-    ) {
-      self.id = id
-      self.name = name
-      self.summary = summary
-      self.category = category
-      self.serving = serving
-      self.time = time
-      self.ingredients = ingredients
-      self.instructions = instructions
-      self.imageData = imageData
-    }
+class Recipe: Identifiable, Equatable {
+  var id: UUID
+  @Attribute(.unique)
+  var name: String
+  var summary: String
+  var serving: Int
+  var time: Int
+  var instructions: String
+  var imageData: Data?
+  @Relationship(deleteRule: .nullify)
+  var category: Category?
+
+  @Relationship(deleteRule: .cascade)
+  var ingredients = [RecipeIngredient]()
+
+  init(
+    name: String = "",
+    summary: String = "",
+    serving: Int = 1,
+    time: Int = 5,
+    instructions: String = "",
+    imageData: Data? = nil,
+    category: Category? = nil
+  ) {
+    self.id = UUID()
+    self.name = name
+    self.summary = summary
+    self.category = category
+    self.serving = serving
+    self.time = time
+    self.instructions = instructions
+    self.imageData = imageData
+  }
+
+  static func == (lhs: Recipe, rhs: Recipe) -> Bool {
+    lhs.id == rhs.id
+  }
 }

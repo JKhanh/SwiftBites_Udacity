@@ -15,7 +15,6 @@ struct RecipeForm: View {
     self.mode = mode
     switch mode {
     case .add:
-      recipe = nil
       title = "Add Recipe"
       _name = .init(initialValue: "")
       _summary = .init(initialValue: "")
@@ -24,7 +23,6 @@ struct RecipeForm: View {
       _instructions = .init(initialValue: "")
       _ingredients = .init(initialValue: [])
     case .edit(let recipe):
-      self.recipe = recipe
       title = "Edit \(recipe.name)"
       _name = .init(initialValue: recipe.name)
       _summary = .init(initialValue: recipe.summary)
@@ -38,7 +36,6 @@ struct RecipeForm: View {
     }
   }
 
-  private var recipe: Recipe?
   private let title: String
   @State private var name: String
   @State private var summary: String
@@ -52,7 +49,10 @@ struct RecipeForm: View {
   @State private var isIngredientsPickerPresented = false
   @State private var error: Error?
   @Environment(\.dismiss) private var dismiss
+
   @Environment(\.modelContext) var context
+  @Query private var allIngredients: [Ingredient]
+  @Query private var allRecipes: [Recipe]
   @Query private var categories: [Category]
 
   // MARK: - Body
@@ -92,9 +92,17 @@ struct RecipeForm: View {
 
   private func ingredientPicker() -> some View {
     IngredientsView { selectedIngredient in
-      let recipeIngredient = RecipeIngredient(
-        ingredient: selectedIngredient, recipe: recipe, quantity: "")
-      ingredients.append(recipeIngredient)
+      do {
+        if let index = allIngredients.firstIndex(where: { $0.id == selectedIngredient.id }) {
+
+          let recipeIngredient = RecipeIngredient(ingredient: allIngredients[index])
+          context.insert(recipeIngredient)
+          try context.save()
+          ingredients.append(recipeIngredient)
+        }
+      } catch {
+        fatalError()
+      }
     }
   }
 
@@ -200,25 +208,27 @@ struct RecipeForm: View {
         )
       } else {
         ForEach(ingredients) { ingredient in
-          HStack(alignment: .center) {
-            Text(ingredient.ingredient.name)
-              .bold()
-              .layoutPriority(2)
-            Spacer()
-            TextField(
-              "Quantity",
-              text: .init(
-                get: {
-                  ingredient.quantity
-                },
-                set: { quantity in
-                  if let index = ingredients.firstIndex(where: { $0.id == ingredient.id }) {
-                    ingredients[index].quantity = quantity
+          if let recipeIngredient = ingredient.ingredient {
+            HStack(alignment: .center) {
+              Text(recipeIngredient.name)
+                .bold()
+                .layoutPriority(2)
+              Spacer()
+              TextField(
+                "Quantity",
+                text: .init(
+                  get: {
+                    ingredient.quantity
+                  },
+                  set: { quantity in
+                    if let index = ingredients.firstIndex(where: { $0.id == ingredient.id }) {
+                      ingredients[index].quantity = quantity
+                    }
                   }
-                }
+                )
               )
-            )
-            .layoutPriority(1)
+              .layoutPriority(1)
+            }
           }
         }
         .onDelete(perform: deleteIngredients)
@@ -268,8 +278,16 @@ struct RecipeForm: View {
     guard case .edit(let recipe) = mode else {
       fatalError("Delete unavailable in add mode")
     }
-    context.delete(recipe)
-    dismiss()
+    do {
+      for recipeIngredient in recipe.ingredients {
+        context.delete(recipeIngredient)
+      }
+      context.delete(recipe)
+      try context.save()
+      dismiss()
+    } catch (let error) {
+      fatalError(error.localizedDescription)
+    }
   }
 
   func deleteIngredients(offsets: IndexSet) {
@@ -279,52 +297,40 @@ struct RecipeForm: View {
   }
 
   func save() {
-    let categoryDescriptor = FetchDescriptor<Category>()
-    let category = try? context.fetch(categoryDescriptor).first(where: { $0.id == categoryId })
+    let category = categories.first(where: { $0.id == categoryId })
 
-    switch mode {
-    case .add:
-      let newRecipe = Recipe(
-        name: name,
-        summary: summary,
-        category: category,
-        serving: serving,
-        time: time,
-        ingredients: ingredients,
-        instructions: instructions,
-        imageData: imageData
-      )
-      for ingredient in newRecipe.ingredients {
-        ingredient.recipe = newRecipe
-      }
-        if let category {
-            category.recipes.append(newRecipe)
+    do {
+      switch mode {
+      case .add:
+        let newRecipe = Recipe(
+          name: name,
+          summary: summary,
+          serving: serving,
+          time: time,
+          instructions: instructions,
+          imageData: imageData,
+          category: category
+        )
+        context.insert(newRecipe)
+        category?.recipes.append(newRecipe)
+        newRecipe.ingredients = ingredients
+      case .edit(let recipe):
+        if let updateRecipe = allRecipes.first(where: { $0.id == recipe.id }) {
+          updateRecipe.name = name
+          updateRecipe.summary = summary
+          updateRecipe.serving = serving
+          updateRecipe.time = time
+          updateRecipe.instructions = instructions
+          updateRecipe.imageData = imageData
+          updateRecipe.category = category
+          updateRecipe.ingredients = ingredients
+          category?.recipes.append(updateRecipe)
         }
-      context.insert(newRecipe)
-    case .edit(_):
-        
-      if let edittedRecipe = self.recipe {
-          
-          if edittedRecipe.category != category {
-              if let oldCategory = edittedRecipe.category {
-                  oldCategory.recipes.remove(at: oldCategory.recipes.firstIndex(of: edittedRecipe)!)
-              }
-              if let newCategory = category {
-                  newCategory.recipes.append(edittedRecipe)
-              }
-          }
-          
-        edittedRecipe.name = name
-        edittedRecipe.summary = summary
-        edittedRecipe.category = category
-        edittedRecipe.serving = serving
-        edittedRecipe.time = time
-        edittedRecipe.ingredients = ingredients
-        edittedRecipe.instructions = instructions
-        edittedRecipe.imageData = imageData
       }
+      try context.save()
+      dismiss()
+    } catch {
+      self.error = error
     }
-      try? context.save()
-    dismiss()
   }
 }

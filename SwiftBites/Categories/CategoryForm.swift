@@ -1,5 +1,5 @@
-import SwiftUI
 import SwiftData
+import SwiftUI
 
 struct CategoryForm: View {
   enum Mode: Hashable {
@@ -13,11 +13,9 @@ struct CategoryForm: View {
     self.mode = mode
     switch mode {
     case .add:
-      category = nil
       _name = .init(initialValue: "")
       title = "Add Category"
     case .edit(let category):
-      self.category = category
       _name = .init(initialValue: category.name)
       title = "Edit \(category.name)"
     }
@@ -29,7 +27,8 @@ struct CategoryForm: View {
   @Environment(\.modelContext) var context
   @Environment(\.dismiss) private var dismiss
   @FocusState private var isNameFocused: Bool
-  private var category: Category?
+  @Query
+  private var categories: [Category]
 
   // MARK: - Body
 
@@ -72,20 +71,33 @@ struct CategoryForm: View {
   // MARK: - Data
 
   private func delete(category: Category) {
-    context.delete(category)
+    do {
+      for recipe in category.recipes {
+        recipe.category = nil
+      }
+      context.delete(category)
+      try context.save()
+    } catch {
+      self.error = error
+    }
     dismiss()
   }
 
   private func save() {
-    switch mode {
-    case .add:
-      context.insert(Category(name: name))
-    case .edit(_):
-      if let editedCategory = self.category {
-        editedCategory.name = name
+    do {
+      switch mode {
+      case .add:
+        context.insert(Category(name: name))
+      case .edit(let category):
+        if let updateCategory = categories.first(where: { $0.id == category.id }) {
+          updateCategory.name = name
+        }
       }
+      try context.save()
+      dismiss()
+    } catch {
+      self.error = error
     }
-    dismiss()
   }
-    
+
 }
