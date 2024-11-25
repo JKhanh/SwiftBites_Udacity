@@ -9,7 +9,7 @@ import Foundation
 import SwiftData
 
 @Model
-class Recipe: Identifiable, Equatable {
+class Recipe: Identifiable {
   var id: UUID
   @Attribute(.unique)
   var name: String
@@ -41,9 +41,5 @@ class Recipe: Identifiable, Equatable {
     self.time = time
     self.instructions = instructions
     self.imageData = imageData
-  }
-
-  static func == (lhs: Recipe, rhs: Recipe) -> Bool {
-    lhs.id == rhs.id
   }
 }

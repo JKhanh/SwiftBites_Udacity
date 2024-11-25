@@ -13,7 +13,7 @@ struct CategoriesView: View {
       content
         .navigationTitle("Categories")
         .toolbar {
-            if categories.isEmpty {
+            if !categories.isEmpty {
             NavigationLink(value: CategoryForm.Mode.add) {
               Label("Add", systemImage: "plus")
             }

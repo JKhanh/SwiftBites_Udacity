@@ -19,7 +19,7 @@ struct IngredientsView: View {
       content
         .navigationTitle("Ingredients")
         .toolbar {
-          if ingredients.isEmpty {
+          if !ingredients.isEmpty {
             NavigationLink(value: IngredientForm.Mode.add) {
               Label("Add", systemImage: "plus")
             }

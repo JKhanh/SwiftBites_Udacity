@@ -14,11 +14,10 @@ struct CategoryList: View {
   @Query private var categories: [Category]
 
   init(query: String) {
-    guard !query.isEmpty else { return }
     self.query = query
     self._categories = Query(
       filter: #Predicate<Category> { category in
-        category.name.contains(query)
+          category.name.localizedStandardContains(query) || query.isEmpty
       })
   }
 

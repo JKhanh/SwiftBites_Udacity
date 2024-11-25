@@ -9,7 +9,7 @@ import SwiftData
 import Foundation
 
 @Model
-class Category: Identifiable, Equatable {
+class Category: Identifiable {
     var id: UUID
     var name: String
     @Relationship(deleteRule: .nullify, inverse: \Recipe.category)
@@ -19,9 +19,5 @@ class Category: Identifiable, Equatable {
         self.id = id
         self.name = name
         self.recipes = recipes
-    }
-    
-    static func == (lhs: Category, rhs: Category) -> Bool {
-      lhs.id == rhs.id
     }
 }

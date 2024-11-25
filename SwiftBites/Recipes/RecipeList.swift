@@ -14,11 +14,10 @@ struct RecipeList: View {
   @State private var sortOrder = SortDescriptor(\Recipe.name)
 
   init(query: String) {
-    guard !query.isEmpty else { return }
     self.query = query
     self._recipes = Query(
       filter: #Predicate<Recipe> { category in
-        category.name.contains(query)
+          category.name.contains(query) || query.isEmpty
       })
   }
 

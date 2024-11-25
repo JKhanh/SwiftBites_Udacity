@@ -19,11 +19,10 @@ struct IngredientList: View {
 
   init(query: String, selection: ((Ingredient) -> Void)? = nil) {
     self.selection = selection
-    guard !query.isEmpty else { return }
     self.query = query
     self._ingredients = Query(
       filter: #Predicate<Ingredient> { ingredient in
-        ingredient.name.contains(query)
+          ingredient.name.localizedStandardContains(query) || query.isEmpty
       })
   }
 
