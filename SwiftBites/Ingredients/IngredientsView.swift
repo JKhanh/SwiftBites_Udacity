@@ -35,7 +35,7 @@ struct IngredientsView: View {
 
   @ViewBuilder
   private var content: some View {
-    IngredientList(query: query, selection: selection)
+      GroceryItemsView(searchQuery: query, onSelectItem: selection)
       .searchable(text: $query)
   }
 

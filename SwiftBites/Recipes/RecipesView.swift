@@ -21,7 +21,7 @@ struct RecipesView: View {
     if recipes.isEmpty {
       empty
     } else {
-      RecipeList(query: query)
+        RecipeViewList(searchQuery: query)
         .searchable(text: $query)
     }
   }

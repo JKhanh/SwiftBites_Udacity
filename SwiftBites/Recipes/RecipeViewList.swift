@@ -8,34 +8,35 @@
 import SwiftUI
 import SwiftData
 
-struct RecipeList: View {
-  @State private var query: String = ""
-  @Query private var recipes: [Recipe]
-  @State private var sortOrder = SortDescriptor(\Recipe.name)
+struct RecipeViewList: View {
+  @State private var searchQuery: String = ""
+  @Query private var recipeList: [Recipe]
+  @State private var sortingOption = SortDescriptor(\Recipe.name)
 
-  init(query: String) {
-    self.query = query
-    self._recipes = Query(
-      filter: #Predicate<Recipe> { category in
-          category.name.contains(query) || query.isEmpty
-      })
+  init(searchQuery: String) {
+    self.searchQuery = searchQuery
+    self._recipeList = Query(
+      filter: #Predicate<Recipe> { recipe in
+        recipe.name.localizedStandardContains(searchQuery) || searchQuery.isEmpty
+      }
+    )
   }
 
   var body: some View {
     ScrollView(.vertical) {
-      if recipes.isEmpty {
-        noResults
+      if recipeList.isEmpty {
+        noResultsView
       } else {
-        LazyVStack(spacing: 10) {
-          ForEach(recipes.sorted(using: sortOrder), content: RecipeCell.init)
+        LazyVStack(spacing: 12) {
+            ForEach(recipeList.sorted(using: sortingOption), content: RecipeCell.init)
         }
       }
     }
     .toolbar {
-      if !recipes.isEmpty {
-        sortOptions
+      if !recipeList.isEmpty {
+        sortMenu
         ToolbarItem(placement: .topBarTrailing) {
-          NavigationLink(value: RecipeForm.Mode.add) {
+          NavigationLink(destination: RecipeForm(mode: .add)) {
             Label("Add", systemImage: "plus")
           }
         }
@@ -47,10 +48,10 @@ struct RecipeList: View {
   }
 
   @ToolbarContentBuilder
-  var sortOptions: some ToolbarContent {
+  private var sortMenu: some ToolbarContent {
     ToolbarItem(placement: .topBarLeading) {
       Menu("Sort", systemImage: "arrow.up.arrow.down") {
-        Picker("Sort", selection: $sortOrder) {
+        Picker("Sort", selection: $sortingOption) {
           Text("Name")
             .tag(SortDescriptor(\Recipe.name))
 
@@ -71,11 +72,11 @@ struct RecipeList: View {
     }
   }
 
-  private var noResults: some View {
-    ContentUnavailableView(
-      label: {
-        Text("Couldn't find \"\(query)\"")
-      }
-    )
+  private var noResultsView: some View {
+    VStack {
+      Text("No recipes found for \"\(searchQuery)\"")
+        .font(.headline)
+        .padding()
+    }
   }
 }

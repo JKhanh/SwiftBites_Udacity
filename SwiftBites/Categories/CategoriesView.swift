@@ -32,7 +32,7 @@ struct CategoriesView: View {
 
   @ViewBuilder
   private var content: some View {
-      CategoryList(query: query)
+      CategoryViewList(searchQuery: query)
           .searchable(text: $query)
   }
 }
