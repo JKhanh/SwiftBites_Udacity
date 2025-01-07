@@ -11,6 +11,9 @@ struct RecipesView: View {
     NavigationStack {
       content
         .navigationTitle("Recipes")
+        .navigationDestination(for: RecipeForm.Mode.self) { mode in
+          RecipeForm(mode: mode)
+        }
     }
   }
 

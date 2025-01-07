@@ -75,7 +75,7 @@ struct IngredientForm: View {
       context.delete(recipeIngredient)
     }
     context.delete(ingredient)
-    try? context.save()
+      dismiss()
   }
 
   private func save() {

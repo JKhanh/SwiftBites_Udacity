@@ -42,9 +42,6 @@ struct RecipeViewList: View {
         }
       }
     }
-    .navigationDestination(for: RecipeForm.Mode.self) { mode in
-      RecipeForm(mode: mode)
-    }
   }
 
   @ToolbarContentBuilder

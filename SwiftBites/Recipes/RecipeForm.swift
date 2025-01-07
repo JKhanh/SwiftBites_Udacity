@@ -278,16 +278,11 @@ struct RecipeForm: View {
     guard case .edit(let recipe) = mode else {
       fatalError("Delete unavailable in add mode")
     }
-    do {
       for recipeIngredient in recipe.ingredients {
         context.delete(recipeIngredient)
       }
       context.delete(recipe)
-      try context.save()
       dismiss()
-    } catch (let error) {
-      fatalError(error.localizedDescription)
-    }
   }
 
   func deleteIngredients(offsets: IndexSet) {
